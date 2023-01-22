@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(uuid())
+  username    String       @unique
+  password    String
+  nickname    String       @default("bob")
+  email       String       @unique
+  avatar      String       @default("/")
+  moments     Moment[]
+  rateRecords RateRecord[]
+  createdTime DateTime     @default(now())
+  updatedTime DateTime     @default(now())
+}
+
+model Moment {
+  id          String   @id @default(uuid())
+  content     String
+  User        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+  info        Json
+  createdTime DateTime @default(now())
+  updatedTime DateTime
+}
+
+model Item {
+  id          String       @id
+  name        String
+  category    String
+  ranking     Float
+  info        Json
+  comments    String[]
+  rateRecords RateRecord[]
+  createdTime DateTime     @default(now())
+  updatedTime DateTime     @default(now())
+  Category    Category?    @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
+}
+
+model Category {
+  id         Int      @id @default(autoincrement())
+  name       String
+  type       TypeEnum
+  items      Item[]
+  createTime DateTime @default(now())
+}
+
+model RateRecord {
+  id          Int      @id
+  ranking     Float
+  createdTime DateTime @default(now())
+  updatedTime DateTime @default(now())
+  User        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+  Item        Item?    @relation(fields: [itemId], references: [id])
+  itemId      String?
+}
+
+enum TypeEnum {
+  ENTERTAINMENT
+  GOODS
+  DESTINATION
+  INTERNET
+  OTHERS
+}
