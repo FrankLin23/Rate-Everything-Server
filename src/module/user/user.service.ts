@@ -1,23 +1,35 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { User } from '@prisma/client';
+import { encryptPassword } from 'src/common/encrypt';
 import { PrismaService } from 'src/common/prisma.service';
+import { CreateUserDto } from './dto/create-user.dto';
 import { UserRO } from './interface';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async createUser(data: Prisma.UserCreateInput): Promise<UserRO> {
+  async createUser(data: CreateUserDto): Promise<UserRO> {
     const user = await this.findUserByUsername(data.username);
     if (user) {
-      const errors = 'Username and email must be unique.';
+      const errors = 'Username and must be unique.';
       throw new HttpException(
         { message: 'Input data validation failed', errors },
         HttpStatus.BAD_REQUEST,
       );
     }
+    const _user = await this.findUserByEmail(data.email);
+    if (_user) {
+      const errors = 'Email and must be unique.';
+      throw new HttpException(
+        { message: 'Input data validation failed', errors },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const newUser = data;
+    newUser.password = await encryptPassword(data.password);
     const res = await this.prisma.user.create({
-      data,
+      data: newUser,
     });
     return this.buildUserRO(res);
   }
@@ -34,6 +46,14 @@ export class UserService {
     return this.prisma.user.findUnique({
       where: {
         username,
+      },
+    });
+  }
+
+  async findUserByEmail(email: string): Promise<User> {
+    return this.prisma.user.findUnique({
+      where: {
+        email,
       },
     });
   }
