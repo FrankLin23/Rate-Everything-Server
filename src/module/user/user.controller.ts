@@ -6,17 +6,22 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
-  Param,
   Post,
   Put,
+  Query,
+  Req,
+  UseGuards,
   UsePipes,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
+import { Request } from 'express';
 import { descryptPassword } from 'src/common/encrypt';
 import { AuthService } from '../auth/auth.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserLoginDto } from './dto/user-login.dto';
+import { UserRO } from './interface';
 import { UserService } from './user.service';
 
 @ApiTags('User Controller')
@@ -30,13 +35,25 @@ export class UserController {
   @Post()
   @HttpCode(HttpStatus.OK)
   @UsePipes()
+  @ApiOperation({ summary: 'Create User' })
   async create(@Body() userData: CreateUserDto): Promise<any> {
     return await this.userService.createUser(userData);
   }
 
-  @Get(':id')
-  async findUserById(@Param() id: string): Promise<User> {
+  @Get()
+  @ApiOperation({ summary: 'Get User By Id' })
+  @UseGuards(JwtAuthGuard)
+  async findUserById(@Query('id') id?: string): Promise<UserRO> {
     return this.userService.findUserById(id);
+  }
+
+  @Get('/profile')
+  @ApiOperation({ summary: 'Get Current User Info' })
+  @UseGuards(JwtAuthGuard)
+  async findCurrentUser(@Req() request: Request) {
+    const token = request.headers.authorization;
+    const verify = this.authService.verifyToken(token);
+    return this.userService.findUserById(verify.sub);
   }
 
   @Put()
@@ -46,7 +63,6 @@ export class UserController {
   async deleteUser() {}
 
   @Post('/login')
-  @UsePipes()
   async login(@Body() userData: UserLoginDto): Promise<string> {
     if (!userData.username && !userData.email) {
       throw new HttpException(

@@ -34,12 +34,14 @@ export class UserService {
     return this.buildUserRO(res);
   }
 
-  async findUserById(id: string): Promise<User> {
-    return this.prisma.user.findUnique({
+  async findUserById(id: string): Promise<UserRO> {
+    let user = await this.prisma.user.findUnique({
       where: {
         id,
       },
     });
+    if (!user) return null;
+    return this.buildUserRO(user);
   }
 
   async findUserByUsername(username: string): Promise<User> {
@@ -62,7 +64,9 @@ export class UserService {
     const userRO: UserRO = {
       id: user.id,
       username: user.username,
+      nickname: user.nickname,
       email: user.email,
+      avatar: user.avatar,
     };
     return userRO;
   }
